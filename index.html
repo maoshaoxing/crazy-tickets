@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>离谱票 - 全网最低价一键比价</title>
+<style>
+  :root {
+    --bg: #0f0f1a;
+    --card-bg: rgba(255,255,255,0.05);
+    --text: #e0e0e0;
+    --accent: #ff4757;
+    --accent2: #ff6b81;
+    --gold: #feca57;
+    --blue: #3742fa;
+    --green: #2ed573;
+    --border: rgba(255,255,255,0.1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background animation */
+  .bg-animate {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 20% 50%, rgba(255,71,87,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(55,66,250,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(46,213,115,0.06) 0%, transparent 50%);
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 900px; margin: 0 auto; padding: 20px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center; padding: 40px 0 20px;
+  }
+  .header .logo {
+    font-size: 2.8rem; font-weight: 900;
+    background: linear-gradient(135deg, var(--accent), var(--accent2), var(--gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header .subtitle {
+    margin-top: 8px; font-size: 0.95rem; color: #888;
+  }
+  .header .subtitle span { color: var(--accent); font-weight: 700; }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 24px;
+    background: var(--card-bg); border-radius: 14px; padding: 5px;
+    border: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1; text-align: center; padding: 12px;
+    border-radius: 10px; cursor: pointer; font-weight: 600;
+    font-size: 1rem; transition: all 0.25s;
+    color: #888; border: none; background: transparent;
+  }
+  .tab:hover { color: #ccc; background: rgba(255,255,255,0.05); }
+  .tab.active {
+    background: rgba(255,71,87,0.2); color: var(--accent2);
+    box-shadow: 0 0 20px rgba(255,71,87,0.15);
+  }
+  .tab em { font-style: normal; font-size: 1.3rem; margin-right: 6px; }
+
+  /* Search Form */
+  .search-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px; margin-bottom: 24px;
+    backdrop-filter: blur(20px);
+  }
+  .search-row {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .search-field {
+    flex: 1; min-width: 140px;
+  }
+  .search-field label {
+    display: block; font-size: 0.8rem; color: #888;
+    margin-bottom: 6px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .search-field input {
+    width: 100%; padding: 14px 16px;
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+    border-radius: 12px; color: #fff; font-size: 1rem;
+    transition: all 0.2s; outline: none;
+  }
+  .search-field input:focus {
+    border-color: var(--accent2); background: rgba(255,255,255,0.1);
+    box-shadow: 0 0 0 3px rgba(255,71,87,0.1);
+  }
+  .search-field input::placeholder { color: #555; }
+  .swap-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--card-bg); border: 1px solid var(--border);
+    cursor: pointer; font-size: 1.2rem; color: #aaa;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0; margin-bottom: 1px;
+  }
+  .swap-btn:hover { background: rgba(255,255,255,0.12); color: #fff; transform: rotate(180deg); }
+
+  .search-btn {
+    padding: 14px 32px; background: linear-gradient(135deg, var(--accent), #e84357);
+    color: #fff; border: none; border-radius: 12px; font-size: 1.05rem;
+    font-weight: 700; cursor: pointer; transition: all 0.25s;
+    min-width: 120px; letter-spacing: 0.5px;
+  }
+  .search-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255,71,87,0.35);
+  }
+  .search-btn:active { transform: scale(0.97); }
+
+  /* Tips */
+  .tips {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px;
+  }
+  .tip {
+    font-size: 0.78rem; color: #666; background: rgba(255,255,255,0.03);
+    padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);
+  }
+  .tip strong { color: var(--gold); }
+
+  /* Results */
+  .results-title {
+    font-size: 1.1rem; font-weight: 700; margin-bottom: 16px;
+    color: #aaa; text-align: center;
+  }
+  .results-title strong { color: var(--accent2); }
+
+  .platforms-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px; margin-bottom: 24px;
+  }
+
+  .platform-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px; text-align: center;
+    cursor: pointer; transition: all 0.3s; position: relative;
+    overflow: hidden; text-decoration: none; color: inherit; display: block;
+  }
+  .platform-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255,255,255,0.25);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .platform-card .card-glow {
+    position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%);
+    opacity: 0; transition: opacity 0.4s;
+  }
+  .platform-card:hover .card-glow { opacity: 1; }
+  .platform-icon {
+    font-size: 2.5rem; margin-bottom: 8px; position: relative; z-index: 1;
+  }
+  .platform-name {
+    font-weight: 700; font-size: 1rem; margin-bottom: 4px; position: relative; z-index: 1;
+  }
+  .platform-desc {
+    font-size: 0.75rem; color: #666; position: relative; z-index: 1;
+  }
+  .platform-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 0.7rem; font-weight: 700; margin-top: 8px; position: relative; z-index: 1;
+  }
+  .badge-train { background: rgba(55,66,250,0.2); color: #7b8cff; }
+  .badge-flight { background: rgba(46,213,115,0.2); color: #5ef08a; }
+  .badge-offical { background: rgba(254,202,87,0.2); color: var(--gold); }
+
+  .one-click-bar {
+    text-align: center; margin-bottom: 30px;
+  }
+  .one-click-btn {
+    padding: 16px 40px; font-size: 1.1rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    color: #000; border: none; border-radius: 50px;
+    cursor: pointer; transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(255,71,87,0.3);
+  }
+  .one-click-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 35px rgba(255,71,87,0.5);
+  }
+  .one-click-btn:active { transform: scale(0.97); }
+
+  /* Footer */
+  .footer {
+    text-align: center; padding: 30px 0; font-size: 0.75rem; color: #444;
+  }
+  .footer a { color: #666; text-decoration: none; }
+  .footer a:hover { color: var(--accent2); }
+
+  /* Price hint badge */
+  .price-hint {
+    font-size: 0.7rem; padding: 2px 8px; border-radius: 20px;
+    background: rgba(46,213,115,0.15); color: var(--green);
+    margin-top: 6px; position: relative; z-index: 1;
+  }
+
+  /* Animations */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .float-anim { animation: float 3s ease-in-out infinite; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .search-row { flex-direction: column; }
+    .search-field { min-width: 100%; }
+    .swap-btn { align-self: center; }
+    .platforms-grid { grid-template-columns: repeat(2, 1fr); }
+    .header .logo { font-size: 2rem; }
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: rgba(46,213,115,0.9); color: #000; padding: 12px 28px;
+    border-radius: 50px; font-weight: 700; z-index: 999;
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2s forwards;
+    pointer-events: none;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+  @keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+
+  /* City suggestions */
+  .suggestions {
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: #1a1a2e; border: 1px solid var(--border);
+    border-radius: 12px; max-height: 200px; overflow-y: auto;
+    z-index: 100; display: none; margin-top: 4px;
+  }
+  .sugg-item {
+    padding: 10px 16px; cursor: pointer; font-size: 0.9rem;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .sugg-item:hover { background: rgba(255,255,255,0.08); }
+  .sugg-item:last-child { border-bottom: none; }
+  .field-wrapper { position: relative; }
+</style>
+</head>
+<body>
+
+<div class="bg-animate"></div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">离谱票 🎫</div>
+    <div class="subtitle">不是爬虫，是<span>一键比价跳转器</span> —— 同时打开所有平台，价格永远实时</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('train')"><em>🚄</em>高铁 / 火车票</button>
+    <button class="tab" onclick="switchTab('flight')"><em>✈️</em>机票</button>
+  </div>
+
+  <!-- Search Form -->
+  <div class="search-card">
+    <div class="search-row">
+      <div class="search-field">
+        <label>出发地</label>
+        <div class="field-wrapper">
+          <input type="text" id="origin" placeholder="北京" autocomplete="off" oninput="showSuggestions('origin')" onfocus="showSuggestions('origin')" onblur="hideSuggLater('origin')">
+          <div class="suggestions" id="sugg-origin"></div>
+        </div>
+      </div>
+      <button class="swap-btn" onclick="swapCities()" title="交换出发/目的地">⇄</button>
+      <div class="search-field">
+        <label>目的地</label>
+        <div class="field-wrapper">
+          <input type="text" id="destination" placeholder="上海" autocomplete="off" oninput="showSuggestions('destination')" onfocus="showSuggestions('destination')" onblur="hideSuggLater('destination')">
+          <div class="suggestions" id="sugg-destination"></div>
+        </div>
+      </div>
+      <div class="search-field">
+        <label>出发日期</label>
+        <input type="date" id="date">
+      </div>
+      <button class="search-btn" onclick="search()">比价</button>
+    </div>
+    <div class="tips">
+      <span class="tip">💡 <strong>不抓取价格</strong>，直接跳转到各平台真实搜索结果页</span>
+      <span class="tip">🔗 点击平台卡片 → 打开对应平台的预订页面</span>
+      <span class="tip">✈️ 机票价格已含燃油附加费，以平台最终显示为准</span>
+      <span class="tip">📱 手机扫码即可支付完成预订</span>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results" style="display:none;">
+    <div class="results-title">
+      已为您准备好 <strong id="resultCount">5</strong> 个平台的比价链接 —— 点击任意卡片直达预订
+    </div>
+    <div class="platforms-grid" id="platformsGrid"></div>
+    <div class="one-click-bar">
+      <button class="one-click-btn" onclick="openAll()">🚀 一键打开所有平台</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    本工具仅生成跳转链接，不抓取、存储任何平台数据 | 所有价格以各平台实时显示为准 | 
+    <a href="#" onclick="return false;">离谱票 © 2026</a>
+  </div>
+</div>
+
+<script>
+// ====== 城市代码映射 ======
+const cityCodes = {
+  train: {
+    '北京':'BJP','上海':'SHH','广州':'GZQ','深圳':'SZQ','杭州':'HZH','南京':'NJH',
+    '成都':'CDW','武汉':'WHN','重庆':'CQW','西安':'XAY','长沙':'CSQ','郑州':'ZZF',
+    '济南':'JNK','合肥':'HFH','南昌':'NCG','福州':'FZS','厦门':'XMS','昆明':'KMM',
+    '贵阳':'GIW','南宁':'NNZ','海口':'VUQ','石家庄':'SJP','太原':'TYV','沈阳':'SYT',
+    '长春':'CCT','哈尔滨':'HBB','天津':'TJP','宁波':'NGH','温州':'RZH','苏州':'SZH',
+    '无锡':'WXH','大连':'DLT','青岛':'QDK','三亚':'SEQ','拉萨':'LSO','兰州':'LZJ',
+    '西宁':'XNO','银川':'YIJ','呼和浩特':'HHC','乌鲁木齐':'WMR','桂林':'GLZ',
+    '珠海':'ZHQ','东莞':'RTQ','佛山':'FSQ','常州':'CZH','徐州':'XCH','惠州':'HCQ',
+  },
+  flight: {
+    '北京':'BJS','上海':'SHA','广州':'CAN','深圳':'SZX','杭州':'HGH','南京':'NKG',
+    '成都':'CTU','武汉':'WUH','重庆':'CKG','西安':'XIY','长沙':'CSX','郑州':'CGO',
+    '济南':'TNA','合肥':'HFE','南昌':'KHN','福州':'FOC','厦门':'XMN','昆明':'KMG',
+    '贵阳':'KWE','南宁':'NNG','海口':'HAK','石家庄':'SJW','太原':'TYN','沈阳':'SHE',
+    '长春':'CGQ','哈尔滨':'HRB','天津':'TSN','宁波':'NGB','温州':'WNZ','苏州':'SZV',
+    '无锡':'WUX','大连':'DLC','青岛':'TAO','三亚':'SYX','拉萨':'LXA','兰州':'LHW',
+    '西宁':'XNN','银川':'INC','呼和浩特':'HET','乌鲁木齐':'URC','桂林':'KWL',
+    '珠海':'ZUH','徐州':'XUZ','常州':'CZX','惠州':'HUZ','丽江':'LJG','张家界':'DYG',
+  }
+};
+
+const cityList = Object.keys(cityCodes.train);
+
+function getCode(city, type) {
+  return cityCodes[type][city] || city;
+}
+
+// ====== 当前标签页 ======
+let currentTab = 'train';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('results').style.display = 'none';
+}
+
+// ====== 城市搜索建议 ======
+function showSuggestions(fieldId) {
+  const input = document.getElementById(fieldId);
+  const sugg = document.getElementById('sugg-' + fieldId);
+  const val = input.value.trim();
+  if (!val) {
+    const matches = cityList.slice(0, 8);
+    renderSugg(sugg, matches, fieldId);
+    sugg.style.display = 'block';
+    return;
+  }
+  const matches = cityList.filter(c => c.includes(val)).slice(0, 8);
+  if (matches.length === 0) { sugg.style.display = 'none'; return; }
+  renderSugg(sugg, matches, fieldId);
+  sugg.style.display = 'block';
+}
+
+function renderSugg(sugg, matches, fieldId) {
+  sugg.innerHTML = matches.map(c => `<div class="sugg-item" onmousedown="selectCity('${fieldId}','${c}')">${c}</div>`).join('');
+}
+
+function selectCity(fieldId, city) {
+  document.getElementById(fieldId === 'origin' ? 'origin' : 'destination').value = city;
+  document.getElementById('sugg-' + (fieldId === 'origin' ? 'origin' : 'destination')).style.display = 'none';
+}
+
+function hideSuggLater(fieldId) {
+  setTimeout(() => {
+    document.getElementById('sugg-' + fieldId).style.display = 'none';
+  }, 200);
+}
+
+function swapCities() {
+  const o = document.getElementById('origin');
+  const d = document.getElementById('destination');
+  [o.value, d.value] = [d.value, o.value];
+}
+
+// ====== 平台配置 ======
+const trainPlatforms = [
+  {
+    id: '12306', name: '铁路12306', icon: '🚅', type: 'official',
+    desc: '官方渠道，候补成功率最高', color: '#2b5fd9',
+    url: (o,d,date) => `https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc&fs=${encodeURIComponent(o)},${getCode(o,'train')}&ts=${encodeURIComponent(d)},${getCode(d,'train')}&date=${date}&flag=N,N,Y`
+  },
+  {
+    id: 'ctrip', name: '携程旅行', icon: '🐬', type: 'ota',
+    desc: '国内最大OTA，抢票加速包', color: '#1890ff',
+    url: (o,d,date) => `https://trains.ctrip.com/trainbooking/search/?from=${encodeURIComponent(o)}&to=${encodeURIComponent(d)}&day=${date}`
+  },
+  {
+    id: 'qunar', name: '去哪儿', icon: '🐪', type: 'ota',
+    desc: '价格常有优势，支持低价监控', color: '#ff6b35',
+    url: (o,d,date) => `https://train.qunar.com/?fromStation=${encodeURIComponent(o)}&toStation=${encodeURIComponent(d)}&fromDate=${date}`
+  },
+  {
+    id: 'fliggy', name: '飞猪', icon: '🐷', type: 'ota',
+    desc: '阿里系，经常有优惠券', color: '#ff5000',
+    url: (o,d,date) => `https://www.fliggy.com/train/search?departureCity=${encodeURIComponent(o)}&arrivalCity=${encodeURIComponent(d)}&departureDate=${date}`
+  },
+  {
+    id: 'meituan', name: '美团', icon: '🦘', type: 'ota',
+    desc: '本地生活入口，常有新客优惠', color: '#ffc300',
+    url: (o,d,date) => `https://i.meituan.com/train/?startCity=${encodeURIComponent(o)}&endCity=${encodeURIComponent(d)}&startDate=${date}`
+  },
+  {
+    id: 'tongcheng', name: '同程旅行', icon: '🌴', type: 'ota',
+    desc: '微信入口流量，价格有竞争力', color: '#07c160',
+    url: (o,d,date) => `https://www.ly.com/train/search?fromcity=${encodeURIComponent(o)}&tocity=${encodeURIComponent(d)}&fromdate=${date}`
+  },
+];
+
+const flightPlatforms = [
+  {
+    id: 'ctrip_flight', name: '携程机票', icon: '🐬', type: 'ota',
+    desc: '含燃油费最终价，支持全网低价', color: '#1890ff',
+    url: (o,d,date) => `https://flights.ctrip.com/online/channel/domestic?deptcity=${getCode(o,'flight')}&arrvcity=${getCode(d,'flight')}&date=${date}`
+  },
+  {
+    id: 'qunar_flight', name: '去哪儿机票', icon: '🐪', type: 'ota',
+    desc: '价格日历功能强，能看30天低价', color: '#ff6b35',
+    url: (o,d,date) => `https://flight.qunar.com/site/oneway_list.htm?fromCity=${encodeURIComponent(o)}&toCity=${encodeURIComponent(d)}&fromDate=${date}`
+  },
+  {
+    id: 'fliggy_flight', name: '飞猪机票', icon: '🐷', type: 'ota',
+    desc: '88VIP有额外折扣，含税价', color: '#ff5000',
+    url: (o,d,date) => `https://www.fliggy.com/flight/search?departureCity=${encodeURIComponent(o)}&arrivalCity=${encodeURIComponent(d)}&departureDate=${date}`
+  },
+  {
+    id: 'meituan_flight', name: '美团机票', icon: '🦘', type: 'ota',
+    desc: '新客立减，含机建燃油全价', color: '#ffc300',
+    url: (o,d,date) => `https://i.meituan.com/flight/?fromCity=${encodeURIComponent(o)}&toCity=${encodeURIComponent(d)}&fromDate=${date}`
+  },
+  {
+    id: 'tongcheng_flight', name: '同程机票', icon: '🌴', type: 'ota',
+    desc: '微信小程序直通，支付方便', color: '#07c160',
+    url: (o,d,date) => `https://www.ly.com/flight/search?fromcity=${encodeURIComponent(o)}&tocity=${encodeURIComponent(d)}&fromdate=${date}`
+  },
+  {
+    id: 'tuniu_flight', name: '途牛机票', icon: '🐮', type: 'ota',
+    desc: '跟团游绑定机票常有打包价', color: '#00bcd4',
+    url: (o,d,date) => `https://flight.tuniu.com/search?fromCity=${encodeURIComponent(o)}&toCity=${encodeURIComponent(d)}&fromDate=${date}`
+  },
+];
+
+// ====== 渲染 ======
+function search() {
+  const origin = document.getElementById('origin').value.trim();
+  const destination = document.getElementById('destination').value.trim();
+  const date = document.getElementById('date').value;
+
+  if (!origin || !destination) {
+    showToast('请输入出发地和目的地');
+    return;
+  }
+  if (!date) {
+    showToast('请选择出发日期');
+    return;
+  }
+
+  const platforms = currentTab === 'train' ? trainPlatforms : flightPlatforms;
+  const grid = document.getElementById('platformsGrid');
+  const emoji = currentTab === 'train' ? '🚄' : '✈️';
+
+  grid.innerHTML = platforms.map(p => {
+    const url = p.url(origin, destination, date);
+    const badgeClass = p.type === 'official' ? 'badge-offical' : (currentTab === 'train' ? 'badge-train' : 'badge-flight');
+    const badgeText = p.type === 'official' ? '官方' : (currentTab === 'train' ? '火车票' : '机票');
+    return `
+      <a href="${url}" target="_blank" rel="noopener" class="platform-card" onclick="trackClick('${p.id}')">
+        <div class="card-glow"></div>
+        <div class="platform-icon">${p.icon}</div>
+        <div class="platform-name">${p.name}</div>
+        <div class="platform-desc">${p.desc}</div>
+        <span class="platform-badge ${badgeClass}">${badgeText}</span>
+        <div class="price-hint">点击直达预订 → 扫码付款 ${emoji}</div>
+      </a>
+    `;
+  }).join('');
+
+  document.getElementById('resultCount').textContent = platforms.length;
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+}
+
+function openAll() {
+  const origin = document.getElementById('origin').value.trim();
+  const destination = document.getElementById('destination').value.trim();
+  const date = document.getElementById('date').value;
+  const platforms = currentTab === 'train' ? trainPlatforms : flightPlatforms;
+
+  if (!origin || !destination || !date) { search(); return; }
+
+  platforms.forEach((p, i) => {
+    setTimeout(() => {
+      window.open(p.url(origin, destination, date), '_blank', 'noopener');
+    }, i * 300);
+  });
+
+  showToast(`已打开 ${platforms.length} 个平台，请对比价格后选择最低价预订！`);
+}
+
+function trackClick(platformId) {
+  // Optional analytics
+  console.log('Clicked:', platformId);
+}
+
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
+
+// ====== 初始化 ======
+document.addEventListener('DOMContentLoaded', () => {
+  // Set today's date as default
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  document.getElementById('date').value = tomorrow.toISOString().split('T')[0];
+
+  // Keyboard shortcut
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+      search();
+    }
+  });
+});
+</script>
+
+</body>
+</html>
